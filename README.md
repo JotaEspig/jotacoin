@@ -1,0 +1,2 @@
+# jotacoin
+Jota Coin
