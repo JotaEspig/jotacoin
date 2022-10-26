@@ -20,13 +20,11 @@ func TestAddBlock(t *testing.T) {
 		assert.Equal(t, block.Hash, nextBlock.PrevHash)
 
 		pow := blockchain.NewProof(block)
-		assert.Equal(t, true, pow.IsValid())
+		assert.Equal(t, true, pow.Validate())
 	}
 
 	block := chain[1]
-	block.Data = []byte("cavalo") // changes deliberatily the value of data
-	assert.Equal(t, block.Hash, chain[2].PrevHash)
+	block.Data = []byte("other block data") // changes deliberatily the value of data
 	pow := blockchain.NewProof(block)
-	isValid := pow.IsValid()
-	assert.NotEqual(t, true, isValid)
+	assert.NotEqual(t, true, pow.Validate())
 }

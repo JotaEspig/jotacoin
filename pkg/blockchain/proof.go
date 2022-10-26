@@ -34,7 +34,6 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	var hash [sha256.Size]byte
 
 	nonce := 0
-
 	for nonce < math.MaxInt64 {
 		data := pow.InitData(nonce)
 		hash = sha256.Sum256(data)
@@ -52,7 +51,8 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	return nonce, hash[:]
 }
 
-func (pow *ProofOfWork) IsValid() bool {
+// Validate checks the validation of the block
+func (pow *ProofOfWork) Validate() bool {
 	var intHash big.Int
 
 	data := pow.InitData(pow.Block.Nonce)
