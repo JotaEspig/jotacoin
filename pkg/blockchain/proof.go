@@ -18,6 +18,13 @@ type ProofOfWork struct {
 	Target *big.Int
 }
 
+// NewProof creates a new Proof of Work struct
+func NewProof(block *Block) *ProofOfWork {
+	target := big.NewInt(1)
+	target.Lsh(target, uint(256-Difficulty))
+	return &ProofOfWork{block, target}
+}
+
 // InitData transform the values of the block plus the nonce and difficulty to generate the hash afterwards
 func (pow *ProofOfWork) InitData(nonce int) []byte {
 	return bytes.Join(
@@ -63,11 +70,4 @@ func (pow *ProofOfWork) Validate() bool {
 	intHash.SetBytes(hash[:])
 
 	return intHash.Cmp(pow.Target) == -1
-}
-
-// NewProof creates a new Proof of Work struct
-func NewProof(block *Block) *ProofOfWork {
-	target := big.NewInt(1)
-	target.Lsh(target, uint(256-Difficulty))
-	return &ProofOfWork{block, target}
 }
