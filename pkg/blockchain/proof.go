@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"jotacoin/pkg/utils"
-	"log"
 	"math"
 	"math/big"
 )
@@ -48,16 +47,12 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 		data := pow.InitData(nonce)
 		hash = sha256.Sum256(data)
 
-		log.Printf("\r%x", hash)
-
 		intHash.SetBytes(hash[:])
-
 		if intHash.Cmp(pow.Target) == -1 {
 			break
 		}
 		nonce++
 	}
-	log.Println()
 	return nonce, hash[:]
 }
 
