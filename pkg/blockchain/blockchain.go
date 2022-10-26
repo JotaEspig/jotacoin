@@ -16,13 +16,9 @@ type BlockChain struct {
 func NewBlockChain() (*BlockChain, error) {
 	var lastHash []byte
 
-	opts := badger.DefaultOptions(dbPath)
-	db, err := badger.Open(opts)
-	if err != nil {
-		return nil, err
-	}
+	db := connectDB()
 
-	err = db.Update(func(txn *badger.Txn) error {
+	err := db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("lastHash"))
 		if err == badger.ErrKeyNotFound {
 			genesis := NewBlock("genesis", []byte{})
