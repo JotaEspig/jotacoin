@@ -56,8 +56,8 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	return nonce, hash[:]
 }
 
-// Validate checks the validation of the block
-func (pow *ProofOfWork) Validate() bool {
+// IsValid checks the validation of the block
+func (pow *ProofOfWork) IsValid() bool {
 	var intHash big.Int
 
 	data := pow.InitData(pow.Block.Nonce)

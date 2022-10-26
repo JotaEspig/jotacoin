@@ -34,7 +34,7 @@ func (cli *CommandLine) printAll() {
 		}
 
 		pow := blockchain.NewProof(block)
-		isValid := pow.Validate()
+		isValid := pow.IsValid()
 
 		fmt.Println()
 		fmt.Printf("Hash: %x\nValue: %s\nPrevious Hash: %x\nPoW: %v\n",
