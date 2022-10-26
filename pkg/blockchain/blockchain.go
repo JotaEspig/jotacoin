@@ -4,8 +4,6 @@ import (
 	"github.com/dgraph-io/badger"
 )
 
-const dbPath = "./../db/"
-
 // BlockChain Represents a chain of blocks
 type BlockChain struct {
 	LastHash []byte

@@ -2,6 +2,8 @@ package blockchain
 
 import "github.com/dgraph-io/badger"
 
+const dbPath = "./db/"
+
 func connectDB() *badger.DB {
 	opts := badger.DefaultOptions(dbPath)
 	opts.Logger = nil
