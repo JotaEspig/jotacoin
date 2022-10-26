@@ -12,11 +12,13 @@ import (
 // Difficulty defines the difficult of the proof
 const Difficulty = 12
 
+// ProofOfWork represents a struct that will be responsable to run the algorithm
 type ProofOfWork struct {
 	Block  *Block
 	Target *big.Int
 }
 
+// InitData transform the values of the block plus the nonce and difficulty to generate the hash afterwards
 func (pow *ProofOfWork) InitData(nonce int) []byte {
 	return bytes.Join(
 		[][]byte{
@@ -29,6 +31,7 @@ func (pow *ProofOfWork) InitData(nonce int) []byte {
 	)
 }
 
+// Run runs the proof of work and generates the nonce and the hash
 func (pow *ProofOfWork) Run() (int, []byte) {
 	var intHash big.Int
 	var hash [sha256.Size]byte
