@@ -29,7 +29,7 @@ func (pow *ProofOfWork) InitData(nonce int) []byte {
 	return bytes.Join(
 		[][]byte{
 			pow.Block.PrevHash,
-			pow.Block.Data,
+			pow.Block.HashTransactions(),
 			utils.ToHex(int64(nonce)),
 			utils.ToHex(int64(Difficulty)),
 		},

@@ -2,27 +2,44 @@ package blockchain
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/gob"
 	"log"
 )
 
 // Block represents a block in a blockchain
 type Block struct {
-	Hash     []byte
-	Data     []byte
-	PrevHash []byte
-	Nonce    int
+	Hash         []byte
+	Transactions []*Transaction
+	PrevHash     []byte
+	Nonce        int
 }
 
 // NewBlock creates a new block struct
-func NewBlock(data string, prevHash []byte) *Block {
-	b := &Block{[]byte{}, []byte(data), prevHash, 0}
+func NewBlock(txs []*Transaction, prevHash []byte) *Block {
+	b := &Block{[]byte{}, txs, prevHash, 0}
 	pow := NewProof(b)
 	nonce, hash := pow.Run()
 
 	b.Hash = hash[:]
 	b.Nonce = nonce
 	return b
+}
+
+func Genesis(coinbase *Transaction) *Block {
+	return NewBlock([]*Transaction{coinbase}, []byte{})
+}
+
+func (b *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+	var txHash [sha256.Size]byte
+
+	for _, tx := range b.Transactions {
+		txHashes = append(txHashes, tx.ID)
+	}
+	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
+
+	return txHash[:]
 }
 
 // Serialize returns a block struct as a SerializedBlock

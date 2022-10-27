@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"encoding/hex"
 	"errors"
 	"jotacoin/pkg/database"
 
@@ -25,21 +26,15 @@ func NewBlockChain(address string) (*BlockChain, error) {
 
 	db := database.ConnectDB()
 	err := db.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte("lastHash"))
-		if err == badger.ErrKeyNotFound {
-			genesis := NewBlock("genesis", []byte{})
-			err = txn.Set(genesis.Hash, genesis.Serialize())
-			if err != nil {
-				return err
-			}
+		cbtx, err := CoinbaseTx(address, genesisData)
+		if err != nil {
+			return err
+		}
 
-			err = txn.Set([]byte("lastHash"), genesis.Hash)
-			if err != nil {
-				return err
-			}
-
-			lastHash = genesis.Hash
-			return nil
+		genesis := Genesis(cbtx)
+		err = txn.Set(genesis.Hash, genesis.Serialize())
+		if err != nil {
+			return err
 		}
 
 		err = txn.Set([]byte("lastHash"), genesis.Hash)
@@ -85,7 +80,7 @@ func (chain *BlockChain) Iterator() *Iterator {
 }
 
 // AddBlock adds a block into the chain of blocks
-func (chain *BlockChain) AddBlock(data string) error {
+func (chain *BlockChain) AddBlock(txs []*Transaction) error {
 	var lastHash []byte
 
 	err := chain.DB.View(func(txn *badger.Txn) error {
@@ -102,7 +97,7 @@ func (chain *BlockChain) AddBlock(data string) error {
 		return err
 	}
 
-	newBlock := NewBlock(data, lastHash)
+	newBlock := NewBlock(txs, lastHash)
 	return chain.DB.Update(func(txn *badger.Txn) error {
 		err = txn.Set(newBlock.Hash, newBlock.Serialize())
 		if err != nil {
@@ -117,3 +112,65 @@ func (chain *BlockChain) AddBlock(data string) error {
 		return nil
 	})
 }
+
+func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction {
+	var unspentTxs []*Transaction
+
+	spentTXOs := make(map[string][]int)
+
+	iter := chain.Iterator()
+	for {
+		block, err := iter.Next()
+		if err != nil {
+			break
+		}
+
+		for _, tx := range block.Transactions {
+			txID := hex.EncodeToString(tx.ID)
+
+		Outputs:
+			for outIdx, out := range tx.Outputs {
+				if spentTXOs[txID] != nil {
+					for _, spentOut := range spentTXOs[txID] {
+						if spentOut == outIdx {
+							continue Outputs
+						}
+					}
+				}
+				if out.CanBeUnlocked(address) {
+					unspentTxs = append(unspentTxs, tx)
+				}
+				if !tx.IsCoinbase() {
+					for _, txin := range tx.Inputs {
+						if txin.CanUnlock(address) {
+							txinID := hex.EncodeToString(txin.ID)
+							spentTXOs[txinID] = append(spentTXOs[txinID], txin.Out)
+						}
+					}
+				}
+			}
+		}
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
+
+	return unspentTxs
+}
+
+func (chain *BlockChain) FindUTXO(address string) []TxOutput {
+	var UTXOs []TxOutput
+	unspentTransactions := chain.FindUnspentTransactions(address)
+	for _, tx := range unspentTransactions {
+		for _, out := range tx.Outputs {
+			if out.CanBeUnlocked(address) {
+				UTXOs = append(UTXOs, out)
+			}
+		}
+	}
+
+	return UTXOs
+}
+
+// TODO MUST FINISH: https://youtu.be/HNID8W2jgRM?t=1122
