@@ -1,8 +1,13 @@
 package blockchain
 
 import (
+	"errors"
+	"jotacoin/pkg/database"
+
 	"github.com/dgraph-io/badger"
 )
+
+const genesisData = "Genesis Transaction"
 
 // BlockChain Represents a chain of blocks
 type BlockChain struct {
@@ -11,11 +16,14 @@ type BlockChain struct {
 }
 
 // NewBlockChain creates a new blockchain, starting with 'genesis'
-func NewBlockChain() (*BlockChain, error) {
+func NewBlockChain(address string) (*BlockChain, error) {
 	var lastHash []byte
 
-	db := connectDB()
+	if database.DBexists() {
+		return nil, errors.New("Blockchain already exists")
+	}
 
+	db := database.ConnectDB()
 	err := db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("lastHash"))
 		if err == badger.ErrKeyNotFound {
@@ -34,13 +42,46 @@ func NewBlockChain() (*BlockChain, error) {
 			return nil
 		}
 
+		err = txn.Set([]byte("lastHash"), genesis.Hash)
+		if err != nil {
+			return err
+		}
+
+		lastHash = genesis.Hash
+		return nil
+	})
+
+	return &BlockChain{lastHash, db}, err
+}
+
+func ContinueBlockChain(address string) (*BlockChain, error) {
+	var lastHash []byte
+
+	if !database.DBexists() {
+		return nil, errors.New("Blockchain doesn't exist")
+	}
+
+	db := database.ConnectDB()
+	err := db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte("lastHash"))
+		if err != nil {
+			return err
+		}
 		return item.Value(func(val []byte) error {
 			lastHash = val
 			return nil
 		})
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return &BlockChain{lastHash, db}, err
+	return &BlockChain{lastHash, db}, nil
+}
+
+// Iterator creates a BlockChain Iterador
+func (chain *BlockChain) Iterator() *Iterator {
+	return &Iterator{chain.LastHash, chain.DB}
 }
 
 // AddBlock adds a block into the chain of blocks
@@ -75,9 +116,4 @@ func (chain *BlockChain) AddBlock(data string) error {
 		chain.LastHash = newBlock.Hash
 		return nil
 	})
-}
-
-// Iterator creates a BlockChain Iterador
-func (chain *BlockChain) Iterator() *Iterator {
-	return &Iterator{chain.LastHash, chain.DB}
 }
