@@ -16,9 +16,9 @@ type Transaction struct {
 }
 
 type TxInput struct {
-	ID  []byte // transacion ID
-	Out int    // idx of output in the transaction struct
-	Sig string
+	PrevTxID []byte // previous transacion ID, where the output ("balance") is stored
+	OutIdx   int    // idx of output in the transaction struct
+	Sig      string
 }
 
 type TxOutput struct {
@@ -56,7 +56,7 @@ func CoinbaseTx(to, data string) (*Transaction, error) {
 }
 
 func (tx *Transaction) IsCoinbase() bool {
-	return len(tx.Inputs) == 1 && len(tx.Inputs[0].ID) == 1 && tx.Inputs[0].Out == -1
+	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxID) == 0 && tx.Inputs[0].OutIdx == -1
 }
 
 func (txin *TxInput) CanUnlock(data string) bool {

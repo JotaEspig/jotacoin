@@ -113,6 +113,8 @@ func (chain *BlockChain) AddBlock(txs []*Transaction) error {
 	})
 }
 
+// FindUnspentTransactions returns the Transactions where the output hasn't been spent yet
+// by the address
 func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction {
 	var unspentTxs []*Transaction
 
@@ -125,38 +127,73 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 			break
 		}
 
+	Transactions:
 		for _, tx := range block.Transactions {
-			txID := hex.EncodeToString(tx.ID)
+			if !tx.IsCoinbase() {
+				// If it's not a Coinbase, it means that's a normal transaction
+				// so it has a previous transaction
+				for _, txin := range tx.Inputs {
+					if txin.CanUnlock(address) {
+						// if address can unlock, it means that address spent the previous output
+						prevTxID := hex.EncodeToString(txin.PrevTxID)
+						spentTXOs[prevTxID] = append(spentTXOs[prevTxID], txin.OutIdx)
+					}
+				}
+			}
 
+			txID := hex.EncodeToString(tx.ID)
 		Outputs:
 			for outIdx, out := range tx.Outputs {
+				if !out.CanBeUnlocked(address) {
+					continue
+				}
 				if spentTXOs[txID] != nil {
-					for _, spentOut := range spentTXOs[txID] {
-						if spentOut == outIdx {
+					for _, spentOutIdx := range spentTXOs[txID] {
+						if spentOutIdx == outIdx {
 							continue Outputs
 						}
 					}
 				}
-				if out.CanBeUnlocked(address) {
-					unspentTxs = append(unspentTxs, tx)
-				}
-				if !tx.IsCoinbase() {
-					for _, txin := range tx.Inputs {
-						if txin.CanUnlock(address) {
-							txinID := hex.EncodeToString(txin.ID)
-							spentTXOs[txinID] = append(spentTXOs[txinID], txin.Out)
-						}
-					}
-				}
+
+				unspentTxs = append(unspentTxs, tx)
+				continue Transactions
 			}
 		}
 
+		// if it's the genesis block, break
 		if len(block.PrevHash) == 0 {
 			break
 		}
 	}
 
 	return unspentTxs
+}
+
+// FindSpendableTx returns the tokens accumulated by the spendable outputs and a map where
+// the keys are hte Transactions IDs and the values are slices containing the indexes
+// of the outputs of that Transaction
+func (chain *BlockChain) FindSpendableTx(address string, amount int) (int, map[string][]int) {
+	unspentOuts := make(map[string][]int)
+	unspentTxs := chain.FindUnspentTransactions(address)
+	accumulated := 0
+
+Work:
+	for _, tx := range unspentTxs {
+		txID := hex.EncodeToString(tx.ID)
+
+		for outIdx, out := range tx.Outputs {
+			if out.CanBeUnlocked(address) {
+				accumulated += out.Value
+				unspentOuts[txID] = append(unspentOuts[txID], outIdx)
+
+				if accumulated >= amount {
+					break Work
+				}
+			}
+		}
+	}
+
+	return accumulated, unspentOuts
 }
 
 func (chain *BlockChain) FindUTXO(address string) []TxOutput {
@@ -173,4 +210,15 @@ func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 	return UTXOs
 }
 
-// TODO MUST FINISH: https://youtu.be/HNID8W2jgRM?t=1122
+func (chain *BlockChain) GetBalance(address string) int {
+	unspentOutput := chain.FindUTXO(address)
+	total := 0
+
+	for _, out := range unspentOutput {
+		total += out.Value
+	}
+
+	return total
+}
+
+// TODO MUST FINISH: https://youtu.be/HNID8W2jgRM?t=1290
