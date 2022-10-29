@@ -49,7 +49,8 @@ func NewBlockChain(address string) (*BlockChain, error) {
 	return &BlockChain{lastHash, db}, err
 }
 
-func ContinueBlockChain(address string) (*BlockChain, error) {
+// ContinueBlockChain continues the previous BlockChain if it already exists
+func ContinueBlockChain() (*BlockChain, error) {
 	var lastHash []byte
 
 	if !database.DBexists() {
