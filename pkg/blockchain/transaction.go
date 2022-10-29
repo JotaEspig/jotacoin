@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/hex"
+	"errors"
 	"fmt"
 )
 
@@ -26,6 +28,56 @@ type TxOutput struct {
 	PubKey string
 }
 
+func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transaction, error) {
+	var inputs []TxInput
+	var outputs []TxOutput
+
+	acc, spendableTxs := chain.FindSpendableTx(from, amount)
+	if acc < amount {
+		return nil, errors.New("transaction: not enough balance")
+	}
+
+	for prevTxIDstr, outsIdxs := range spendableTxs {
+		prevTxID, err := hex.DecodeString(prevTxIDstr)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, outIdx := range outsIdxs {
+			input := TxInput{prevTxID, outIdx, from}
+			inputs = append(inputs, input)
+		}
+	}
+
+	outputs = append(outputs, TxOutput{amount, to})
+	if acc > amount {
+		// if the accumulated is greater than the payment, there should be a change
+		outputs = append(outputs, TxOutput{acc - amount, from})
+	}
+
+	tx := &Transaction{nil, inputs, outputs}
+	err := tx.SetID()
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+func NewCoinbaseTx(to, data string) (*Transaction, error) {
+	if data == "" {
+		data = fmt.Sprintf("Coins to %s", to)
+	}
+
+	txin := TxInput{[]byte{}, -1, data}
+	txout := TxOutput{CoinbaseValue, to}
+
+	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{txout}}
+	err := tx.SetID()
+
+	return tx, err
+}
+
 func (tx *Transaction) SetID() error {
 	var result bytes.Buffer
 	var hash [sha256.Size]byte
@@ -39,20 +91,6 @@ func (tx *Transaction) SetID() error {
 	hash = sha256.Sum256(result.Bytes())
 	tx.ID = hash[:]
 	return nil
-}
-
-func CoinbaseTx(to, data string) (*Transaction, error) {
-	if data == "" {
-		data = fmt.Sprintf("Coins to %s", to)
-	}
-
-	txin := TxInput{[]byte{}, -1, data}
-	txout := TxOutput{CoinbaseValue, to}
-
-	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{txout}}
-	err := tx.SetID()
-
-	return tx, err
 }
 
 func (tx *Transaction) IsCoinbase() bool {

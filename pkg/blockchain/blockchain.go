@@ -16,7 +16,7 @@ type BlockChain struct {
 	DB       *badger.DB
 }
 
-// NewBlockChain creates a new blockchain, starting with 'genesis'
+// NewBlockChain creates a new blockchain, starting with coinbase
 func NewBlockChain(address string) (*BlockChain, error) {
 	var lastHash []byte
 
@@ -26,7 +26,7 @@ func NewBlockChain(address string) (*BlockChain, error) {
 
 	db := database.ConnectDB()
 	err := db.Update(func(txn *badger.Txn) error {
-		cbtx, err := CoinbaseTx(address, genesisData)
+		cbtx, err := NewCoinbaseTx(address, genesisData)
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,6 @@ func (chain *BlockChain) AddBlock(txs []*Transaction) error {
 // by the address
 func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction {
 	var unspentTxs []*Transaction
-
 	spentTXOs := make(map[string][]int)
 
 	iter := chain.Iterator()
@@ -147,6 +146,7 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 				if !out.CanBeUnlocked(address) {
 					continue
 				}
+				// Check if the address has already spent the output
 				if spentTXOs[txID] != nil {
 					for _, spentOutIdx := range spentTXOs[txID] {
 						if spentOutIdx == outIdx {
@@ -156,6 +156,7 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 				}
 
 				unspentTxs = append(unspentTxs, tx)
+				// if this transaction was already spent, it can go to another Tx
 				continue Transactions
 			}
 		}
@@ -172,7 +173,7 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 // FindSpendableTx returns the tokens accumulated by the spendable outputs and a map where
 // the keys are hte Transactions IDs and the values are slices containing the indexes
 // of the outputs of that Transaction
-func (chain *BlockChain) FindSpendableTx(address string, amount int) (int, map[string][]int) {
+func (chain *BlockChain) FindSpendableTx(address string, requiredAmount int) (int, map[string][]int) {
 	unspentOuts := make(map[string][]int)
 	unspentTxs := chain.FindUnspentTransactions(address)
 	accumulated := 0
@@ -186,7 +187,7 @@ Work:
 				accumulated += out.Value
 				unspentOuts[txID] = append(unspentOuts[txID], outIdx)
 
-				if accumulated >= amount {
+				if accumulated >= requiredAmount {
 					break Work
 				}
 			}
@@ -196,6 +197,8 @@ Work:
 	return accumulated, unspentOuts
 }
 
+// FindUTXO find the unspent outputs of the address. This function is useful
+// to get the address balance
 func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 	var UTXOs []TxOutput
 	unspentTransactions := chain.FindUnspentTransactions(address)
@@ -210,6 +213,7 @@ func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 	return UTXOs
 }
 
+// GetBalance returns the balance of the address
 func (chain *BlockChain) GetBalance(address string) int {
 	unspentOutput := chain.FindUTXO(address)
 	total := 0
