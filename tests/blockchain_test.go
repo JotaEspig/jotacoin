@@ -10,13 +10,14 @@ import (
 )
 
 func TestAddBlock(t *testing.T) {
-	chain, err := blockchain.NewBlockChain()
+	chain, err := blockchain.NewBlockChain("test")
 	if err != nil {
 		panic(err)
 	}
 	defer chain.DB.Close()
-	chain.AddBlock("first block after genesis")
-	chain.AddBlock("second block after genesis")
+	tx, err := blockchain.NewTransaction("test", "test2", 10, chain)
+	assert.Equal(t, nil, err)
+	chain.AddBlock([]*blockchain.Transaction{tx})
 
 	chain.DB.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("lastHash"))
@@ -37,10 +38,24 @@ func TestAddBlock(t *testing.T) {
 		if err != nil {
 			break
 		}
-		fmt.Printf("Hash: %x\nValue: %s\nPrevious Hash: %x\n\n",
-			block.Hash, string(block.Data), block.PrevHash)
+
+		for _, tx := range block.Transactions {
+			fmt.Printf("Transaction Hash: %x\n\n", tx.Hash)
+
+			fmt.Println("INPUTS:")
+			for _, in := range tx.Inputs {
+				fmt.Printf("PrevTxHash: %x\nOutIdx: %d\nSig: %s\n",
+					in.PrevTxHash, in.OutIdx, in.Sig)
+			}
+
+			fmt.Println("\nOUTPUTS:")
+			for _, out := range tx.Outputs {
+				fmt.Printf("Amount: %d\nPubKey: %s\n", out.Value, out.PubKey)
+			}
+			fmt.Printf("===========\n\n")
+		}
 
 		blocksAmount++
 	}
-	assert.GreaterOrEqual(t, blocksAmount, 3)
+	assert.GreaterOrEqual(t, blocksAmount, 2)
 }
