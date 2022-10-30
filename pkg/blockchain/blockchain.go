@@ -133,7 +133,7 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 				// If it's not a Coinbase, it means that's a normal transaction
 				// so it has a previous transaction
 				for _, txin := range tx.Inputs {
-					if txin.CanUnlock(address) {
+					if txin.IsMadeBy(address) {
 						// if address can unlock, it means that address spent the previous output
 						prevTxHash := hex.EncodeToString(txin.PrevTxHash)
 						spentTXOs[prevTxHash] = append(spentTXOs[prevTxHash], txin.OutIdx)
@@ -144,7 +144,7 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 			txHash := hex.EncodeToString(tx.Hash)
 		Outputs:
 			for outIdx, out := range tx.Outputs {
-				if !out.CanBeUnlocked(address) {
+				if !out.IsFor(address) {
 					continue
 				}
 				// Check if the address has already spent the output
@@ -184,7 +184,7 @@ Work:
 		txHash := hex.EncodeToString(tx.Hash)
 
 		for outIdx, out := range tx.Outputs {
-			if out.CanBeUnlocked(address) {
+			if out.IsFor(address) {
 				accumulated += out.Value
 				unspentOuts[txHash] = append(unspentOuts[txHash], outIdx)
 
@@ -205,7 +205,7 @@ func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 	unspentTxs := chain.FindUnspentTransactions(address)
 	for _, tx := range unspentTxs {
 		for _, out := range tx.Outputs {
-			if out.CanBeUnlocked(address) {
+			if out.IsFor(address) {
 				UTXOs = append(UTXOs, out)
 			}
 		}

@@ -97,10 +97,12 @@ func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxHash) == 0 && tx.Inputs[0].OutIdx == -1
 }
 
-func (txin *TxInput) CanUnlock(data string) bool {
-	return txin.Sig == data
+// IsMadeBy checks if the address has made the input
+func (txin *TxInput) IsMadeBy(address string) bool {
+	return txin.Sig == address
 }
 
-func (txout *TxOutput) CanBeUnlocked(data string) bool {
-	return txout.PubKey == data
+// IsFor checks if the address is the receiver of the output
+func (txout *TxOutput) IsFor(address string) bool {
+	return txout.PubKey == address
 }
