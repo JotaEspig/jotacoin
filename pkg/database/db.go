@@ -6,13 +6,15 @@ import (
 	"github.com/dgraph-io/badger"
 )
 
-const (
-	dbPath = "./db/"
-	dbFile = "./db/MANIFEST"
+var (
+	// DBPath is the path to the database folder
+	DBPath = "./db/"
+	DBFile = "./db/MANIFEST"
 )
 
+// ConnectDB connects to the database
 func ConnectDB() *badger.DB {
-	opts := badger.DefaultOptions(dbPath)
+	opts := badger.DefaultOptions(DBPath)
 	opts.Logger = nil
 	db, err := badger.Open(opts)
 	if err != nil {
@@ -22,7 +24,8 @@ func ConnectDB() *badger.DB {
 	return db
 }
 
+// DBExists checks if the database already exists
 func DBexists() bool {
-	_, err := os.Stat(dbFile)
+	_, err := os.Stat(DBFile)
 	return !os.IsNotExist(err)
 }
