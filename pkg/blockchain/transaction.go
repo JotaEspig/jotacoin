@@ -9,32 +9,40 @@ import (
 	"fmt"
 )
 
+// CoinbaseValue is the predefined amount of tokens for a coinbase
 const CoinbaseValue = 100
 
+// Transaction represents a transaction in a blockchain. For more information:
+// https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html
 type Transaction struct {
 	Hash    []byte
 	Inputs  []TxInput
 	Outputs []TxOutput
 }
 
+// TxInput represents an input of a transaction. For more information:
+// https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html
 type TxInput struct {
 	PrevTxHash []byte // previous transacion ID, where the output ("balance") is stored
 	OutIdx     int    // idx of output in the transaction struct
 	Sig        string
 }
 
+// TxOutput represents an output of a transaction. For more information:
+// https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html
 type TxOutput struct {
 	Value  int
 	PubKey string
 }
 
+// NewTransaction creates a normal transaction (one sender and one receiver)
 func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transaction, error) {
 	var inputs []TxInput
 	var outputs []TxOutput
 
 	acc, spendableTxs := chain.FindSpendableTx(from, amount)
 	if acc < amount {
-		return nil, errors.New("transaction: not enough balance")
+		return nil, errors.New("transaction: not enough balance from the sender")
 	}
 
 	for prevTxIDstr, outsIdxs := range spendableTxs {
@@ -64,6 +72,7 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 	return tx, nil
 }
 
+// NewCoinbaseTx creates a coinbase and it "gives" to a receiver
 func NewCoinbaseTx(to, data string) (*Transaction, error) {
 	if data == "" {
 		data = fmt.Sprintf("Coins to %s", to)
@@ -78,6 +87,7 @@ func NewCoinbaseTx(to, data string) (*Transaction, error) {
 	return tx, err
 }
 
+// SetHash sets the hash to the transaction
 func (tx *Transaction) SetHash() error {
 	var result bytes.Buffer
 	var hash [sha256.Size]byte
@@ -93,6 +103,7 @@ func (tx *Transaction) SetHash() error {
 	return nil
 }
 
+// IsCoinbase checks if the transaction is a coinbase
 func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxHash) == 0 && tx.Inputs[0].OutIdx == -1
 }

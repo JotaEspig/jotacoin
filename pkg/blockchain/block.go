@@ -26,10 +26,12 @@ func NewBlock(txs []*Transaction, prevHash []byte) *Block {
 	return b
 }
 
+// Genesis creates a genesis block
 func Genesis(coinbase *Transaction) *Block {
 	return NewBlock([]*Transaction{coinbase}, []byte{})
 }
 
+// HashTransactions generates the hash of the combined transactions
 func (b *Block) HashTransactions() []byte {
 	var txHashes [][]byte
 	var txHash [sha256.Size]byte
