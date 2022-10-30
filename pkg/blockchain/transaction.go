@@ -12,15 +12,15 @@ import (
 const CoinbaseValue = 100
 
 type Transaction struct {
-	ID      []byte
+	Hash    []byte
 	Inputs  []TxInput
 	Outputs []TxOutput
 }
 
 type TxInput struct {
-	PrevTxID []byte // previous transacion ID, where the output ("balance") is stored
-	OutIdx   int    // idx of output in the transaction struct
-	Sig      string
+	PrevTxHash []byte // previous transacion ID, where the output ("balance") is stored
+	OutIdx     int    // idx of output in the transaction struct
+	Sig        string
 }
 
 type TxOutput struct {
@@ -89,12 +89,12 @@ func (tx *Transaction) SetID() error {
 	}
 
 	hash = sha256.Sum256(result.Bytes())
-	tx.ID = hash[:]
+	tx.Hash = hash[:]
 	return nil
 }
 
 func (tx *Transaction) IsCoinbase() bool {
-	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxID) == 0 && tx.Inputs[0].OutIdx == -1
+	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxHash) == 0 && tx.Inputs[0].OutIdx == -1
 }
 
 func (txin *TxInput) CanUnlock(data string) bool {

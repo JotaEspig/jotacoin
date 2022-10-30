@@ -135,21 +135,21 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 				for _, txin := range tx.Inputs {
 					if txin.CanUnlock(address) {
 						// if address can unlock, it means that address spent the previous output
-						prevTxID := hex.EncodeToString(txin.PrevTxID)
-						spentTXOs[prevTxID] = append(spentTXOs[prevTxID], txin.OutIdx)
+						prevTxHash := hex.EncodeToString(txin.PrevTxHash)
+						spentTXOs[prevTxHash] = append(spentTXOs[prevTxHash], txin.OutIdx)
 					}
 				}
 			}
 
-			txID := hex.EncodeToString(tx.ID)
+			txHash := hex.EncodeToString(tx.Hash)
 		Outputs:
 			for outIdx, out := range tx.Outputs {
 				if !out.CanBeUnlocked(address) {
 					continue
 				}
 				// Check if the address has already spent the output
-				if spentTXOs[txID] != nil {
-					for _, spentOutIdx := range spentTXOs[txID] {
+				if spentTXOs[txHash] != nil {
+					for _, spentOutIdx := range spentTXOs[txHash] {
 						if spentOutIdx == outIdx {
 							continue Outputs
 						}
@@ -181,12 +181,12 @@ func (chain *BlockChain) FindSpendableTx(address string, requiredAmount int) (in
 
 Work:
 	for _, tx := range unspentTxs {
-		txID := hex.EncodeToString(tx.ID)
+		txHash := hex.EncodeToString(tx.Hash)
 
 		for outIdx, out := range tx.Outputs {
 			if out.CanBeUnlocked(address) {
 				accumulated += out.Value
-				unspentOuts[txID] = append(unspentOuts[txID], outIdx)
+				unspentOuts[txHash] = append(unspentOuts[txHash], outIdx)
 
 				if accumulated >= requiredAmount {
 					break Work
@@ -202,8 +202,8 @@ Work:
 // to get the address balance
 func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 	var UTXOs []TxOutput
-	unspentTransactions := chain.FindUnspentTransactions(address)
-	for _, tx := range unspentTransactions {
+	unspentTxs := chain.FindUnspentTransactions(address)
+	for _, tx := range unspentTxs {
 		for _, out := range tx.Outputs {
 			if out.CanBeUnlocked(address) {
 				UTXOs = append(UTXOs, out)
