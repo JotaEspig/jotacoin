@@ -56,7 +56,7 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 	}
 
 	tx := &Transaction{nil, inputs, outputs}
-	err := tx.SetID()
+	err := tx.SetHash()
 	if err != nil {
 		return nil, err
 	}
@@ -73,12 +73,12 @@ func NewCoinbaseTx(to, data string) (*Transaction, error) {
 	txout := TxOutput{CoinbaseValue, to}
 
 	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{txout}}
-	err := tx.SetID()
+	err := tx.SetHash()
 
 	return tx, err
 }
 
-func (tx *Transaction) SetID() error {
+func (tx *Transaction) SetHash() error {
 	var result bytes.Buffer
 	var hash [sha256.Size]byte
 
