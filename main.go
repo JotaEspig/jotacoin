@@ -8,7 +8,7 @@ import (
 
 func main() {
 	fmt.Println("==== JOTA COIN ====")
-	chain, err := blockchain.NewBlockChain()
+	chain, err := blockchain.NewBlockChain("Jota")
 	if err != nil {
 		panic(err)
 	}
