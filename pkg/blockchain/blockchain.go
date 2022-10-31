@@ -225,5 +225,3 @@ func (chain *BlockChain) GetBalance(address string) int {
 
 	return total
 }
-
-// TODO MUST FINISH: https://youtu.be/HNID8W2jgRM?t=1290
