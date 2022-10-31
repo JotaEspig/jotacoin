@@ -20,21 +20,6 @@ type Transaction struct {
 	Outputs []TxOutput
 }
 
-// TxInput represents an input of a transaction. For more information:
-// https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html
-type TxInput struct {
-	PrevTxHash []byte // previous transacion ID, where the output ("balance") is stored
-	OutIdx     int    // idx of output in the transaction struct
-	Sig        string
-}
-
-// TxOutput represents an output of a transaction. For more information:
-// https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html
-type TxOutput struct {
-	Value  int
-	PubKey string
-}
-
 // NewTransaction creates a normal transaction (one sender and one receiver)
 func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transaction, error) {
 	var inputs []TxInput
@@ -106,14 +91,4 @@ func (tx *Transaction) SetHash() error {
 // IsCoinbase checks if the transaction is a coinbase
 func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxHash) == 0 && tx.Inputs[0].OutIdx == -1
-}
-
-// IsMadeBy checks if the address has made the input
-func (txin *TxInput) IsMadeBy(address string) bool {
-	return txin.Sig == address
-}
-
-// IsFor checks if the address is the receiver of the output
-func (txout *TxOutput) IsFor(address string) bool {
-	return txout.PubKey == address
 }
