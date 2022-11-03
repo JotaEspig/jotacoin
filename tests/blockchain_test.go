@@ -39,6 +39,7 @@ func TestAddBlock(t *testing.T) {
 			break
 		}
 
+		fmt.Printf("Block hash: %x\n\n", block.Hash)
 		for _, tx := range block.Transactions {
 			fmt.Printf("Transaction Hash: %x\n\n", tx.Hash)
 
