@@ -72,10 +72,9 @@ func (ws *Wallets) AddWallet() (string, error) {
 		return "", nil
 	}
 
-	addressStr := string(address)
-	(*ws)[addressStr] = w
+	(*ws)[address] = w
 
-	return addressStr, nil
+	return address, nil
 }
 
 func (ws *Wallets) GetAllAddresses() []string {

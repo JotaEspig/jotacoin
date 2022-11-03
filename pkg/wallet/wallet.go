@@ -1,17 +1,18 @@
 package wallet
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 
-	"github.com/mr-tron/base58/base58"
+	"github.com/mr-tron/base58"
 	"golang.org/x/crypto/ripemd160"
 )
 
 const (
-	checksumLength = 4
+	ChecksumLength = 4
 	version        = byte(0x00)
 )
 
@@ -23,17 +24,17 @@ type Wallet struct {
 }
 
 // Address gets the address of the wallet
-func (w *Wallet) Address() ([]byte, error) {
+func (w *Wallet) Address() (string, error) {
 	pubHash, err := PublicKeyHash(w.PublicKey)
 	if err != nil {
-		return []byte{}, err
+		return "", err
 	}
 
 	versionedHash := append([]byte{version}, pubHash...)
 	checksumVal := checksum(versionedHash)
 
 	fullHash := append(versionedHash, checksumVal...)
-	return []byte(base58.Encode(fullHash)), nil
+	return base58.Encode(fullHash), nil
 }
 
 // NewWallet creates a new wallet with random keys
@@ -76,5 +77,19 @@ func checksum(payload []byte) []byte {
 	firstHash := sha256.Sum256(payload)
 	secondHash := sha256.Sum256(firstHash[:])
 
-	return secondHash[:checksumLength]
+	return secondHash[:ChecksumLength]
+}
+
+func ValidateAddress(address string) bool {
+	fullHash, err := base58.Decode(address)
+	if err != nil {
+		return false
+	}
+
+	checksumValue := fullHash[len(fullHash)-ChecksumLength:]
+	version := fullHash[0]
+	pubKeyHash := fullHash[1 : len(fullHash)-ChecksumLength]
+	targetChecksum := checksum(append([]byte{version}, pubKeyHash...))
+
+	return bytes.Compare(targetChecksum, checksumValue) == 0
 }
