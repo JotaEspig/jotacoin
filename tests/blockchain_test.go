@@ -53,7 +53,7 @@ func TestAddBlock(t *testing.T) {
 			for _, out := range tx.Outputs {
 				fmt.Printf("Amount: %d\nPubKey: %s\n", out.Value, out.PubKey)
 			}
-			fmt.Printf("===========\n\n")
+			fmt.Printf("\n==================\n\n")
 		}
 
 		blocksAmount++

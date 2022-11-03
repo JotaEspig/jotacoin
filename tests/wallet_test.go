@@ -21,7 +21,6 @@ func TestAddWallet(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	addresses := wsFromLoadFile.GetAllAddresses()
-	fmt.Println(addresses)
 	assert.Equal(t, 1, len(addresses))
 
 	filepath := wallet.WalletFilePath + wallet.WalletFile
