@@ -2,11 +2,16 @@ package blockchain
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"jotacoin/pkg/wallet"
+	"math/big"
 )
 
 // CoinbaseValue is the predefined amount of tokens for a coinbase
@@ -15,7 +20,7 @@ const CoinbaseValue = 100
 // Transaction represents a transaction in a blockchain. For more information:
 // https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html
 type Transaction struct {
-	Hash    []byte
+	HashID  []byte
 	Inputs  []TxInput
 	Outputs []TxOutput
 }
@@ -25,7 +30,20 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 	var inputs []TxInput
 	var outputs []TxOutput
 
-	acc, spendableTxs := chain.FindSpendableTx(from, amount)
+	wallets, err := wallet.LoadFile()
+	if err != nil {
+		return nil, err
+	}
+	w := wallets.GetWallet(from)
+	if w == nil {
+		return nil, errors.New("wallet: wallet not found")
+	}
+	pubKeyHash, err := wallet.PublicKeyHash(w.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	acc, spendableTxs := chain.FindSpendableOutputs(pubKeyHash, amount)
 	if acc < amount {
 		return nil, errors.New("transaction: not enough balance from the sender")
 	}
@@ -37,19 +55,23 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 		}
 
 		for _, outIdx := range outsIdxs {
-			input := TxInput{prevTxID, outIdx, from}
+			input := TxInput{prevTxID, outIdx, nil, w.PublicKey}
 			inputs = append(inputs, input)
 		}
 	}
 
-	outputs = append(outputs, TxOutput{amount, to})
+	outputs = append(outputs, *NewTxOutput(amount, to))
 	if acc > amount {
 		// if the accumulated is greater than the payment, there should be a change
-		outputs = append(outputs, TxOutput{acc - amount, from})
+		outputs = append(outputs, *NewTxOutput(acc-amount, from))
 	}
 
 	tx := &Transaction{nil, inputs, outputs}
-	err := tx.SetHash()
+	err = tx.Sign(w.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	err = tx.SetHashID()
 	if err != nil {
 		return nil, err
 	}
@@ -63,19 +85,48 @@ func NewCoinbaseTx(to, data string) (*Transaction, error) {
 		data = fmt.Sprintf("Coins to %s", to)
 	}
 
-	txin := TxInput{[]byte{}, -1, data}
-	txout := TxOutput{CoinbaseValue, to}
+	txin := TxInput{[]byte{}, -1, nil, []byte(data)}
+	txout := NewTxOutput(CoinbaseValue, to)
 
-	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{txout}}
-	err := tx.SetHash()
+	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{*txout}}
+	err := tx.SetHashID()
 
 	return tx, err
 }
 
-// SetHash sets the hash to the transaction
-func (tx *Transaction) SetHash() error {
+func (tx *Transaction) Serialize() ([]byte, error) {
+	var encoded bytes.Buffer
+
+	encoder := gob.NewEncoder(&encoded)
+	err := encoder.Encode(encoded)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return encoded.Bytes(), nil
+}
+
+func (tx *Transaction) Hash() ([]byte, error) {
+	var hash [sha256.Size]byte
+
+	txCopy := *tx
+	txCopy.HashID = []byte{}
+
+	txSerialized, err := txCopy.Serialize()
+	if err != nil {
+		return []byte{}, err
+	}
+	hash = sha256.Sum256(txSerialized)
+
+	return hash[:], nil
+}
+
+// SetHashID sets the hash to the transaction
+func (tx *Transaction) SetHashID() error {
 	var result bytes.Buffer
 	var hash [sha256.Size]byte
+
+	tx.HashID = []byte{}
 
 	encode := gob.NewEncoder(&result)
 	err := encode.Encode(tx)
@@ -84,11 +135,66 @@ func (tx *Transaction) SetHash() error {
 	}
 
 	hash = sha256.Sum256(result.Bytes())
-	tx.Hash = hash[:]
+	tx.HashID = hash[:]
 	return nil
+}
+
+// TrimmedCopy returns a copy of the transaction but without the signature
+func (tx *Transaction) TrimmedCopy() Transaction {
+	txCopy := *tx
+	for _, txin := range tx.Inputs {
+		txin.Signature = nil
+	}
+
+	txCopy.SetHashID()
+	return txCopy
 }
 
 // IsCoinbase checks if the transaction is a coinbase
 func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxHash) == 0 && tx.Inputs[0].OutIdx == -1
+}
+
+func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) error {
+	if tx.IsCoinbase() {
+		return nil
+	}
+
+	txCopy := tx.TrimmedCopy()
+	for txinIdx := range txCopy.Inputs {
+		r, s, err := ecdsa.Sign(rand.Reader, privKey, txCopy.HashID)
+		if err != nil {
+			return err
+		}
+		signature := append(r.Bytes(), s.Bytes()...)
+		tx.Inputs[txinIdx].Signature = signature
+	}
+
+	return nil
+}
+
+func (tx *Transaction) Verify() bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	curve := elliptic.P256()
+	txCopy := tx.TrimmedCopy()
+	for _, txin := range tx.Inputs {
+		var r, s, x, y big.Int
+		sigLen := len(txin.Signature)
+		r.SetBytes(txin.Signature[:(sigLen / 2)]) // first half
+		s.SetBytes(txin.Signature[(sigLen / 2):]) // second half
+
+		keyLen := len(txin.PubKey)
+		x.SetBytes(txin.PubKey[:(keyLen / 2)])
+		y.SetBytes(txin.PubKey[(keyLen / 2):])
+
+		rawPubKey := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
+		if !ecdsa.Verify(&rawPubKey, txCopy.HashID, &r, &s) {
+			return false
+		}
+	}
+
+	return true
 }

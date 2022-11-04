@@ -1,26 +1,56 @@
 package blockchain
 
+import (
+	"bytes"
+	"jotacoin/pkg/wallet"
+
+	"github.com/mr-tron/base58"
+)
+
 // TxInput represents an input of a transaction. For more information:
 // https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html
 type TxInput struct {
-	PrevTxHash []byte // previous transacion ID, where the output ("balance") is stored
+	PrevTxHash []byte // previous transacion ID, where the output is stored
 	OutIdx     int    // idx of output in the transaction struct
-	Sig        string
+	Signature  []byte
+	PubKey     []byte
 }
 
 // TxOutput represents an output of a transaction. For more information:
 // https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch05.html
 type TxOutput struct {
-	Value  int
-	PubKey string
+	Value      int
+	PubKeyHash []byte
 }
 
-// IsMadeBy checks if the address has made the input
-func (txin *TxInput) IsMadeBy(address string) bool {
-	return txin.Sig == address
+// UsesKey checks if the hash of TxInput.PubKey is the same as the input
+func (txin *TxInput) UsesKey(publicKeyHash []byte) bool {
+	lockedHash, err := wallet.PublicKeyHash(txin.PubKey)
+	if err != nil {
+		return false
+	}
+	return bytes.Compare(lockedHash, publicKeyHash) == 0
 }
 
-// IsFor checks if the address is the receiver of the output
-func (txout *TxOutput) IsFor(address string) bool {
-	return txout.PubKey == address
+// NewTxOutput creates a new output
+func NewTxOutput(value int, address string) *TxOutput {
+	txout := &TxOutput{value, nil}
+	txout.Lock(address)
+	return txout
+}
+
+// Lock locks the output according to the address
+func (txout *TxOutput) Lock(address string) error {
+	fullHash, err := base58.Decode(address)
+	if err != nil {
+		return err
+	}
+
+	txout.PubKeyHash = fullHash[1 : len(fullHash)-wallet.ChecksumLength]
+	return nil
+}
+
+// IsLockedWithKey checks if the output is locked with the key passed in the args
+func (txout *TxOutput) IsLockedWithKey(pubKeyHash []byte) bool {
+	return bytes.Compare(txout.PubKeyHash, pubKeyHash) == 0
 }

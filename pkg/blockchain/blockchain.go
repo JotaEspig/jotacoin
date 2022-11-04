@@ -116,7 +116,7 @@ func (chain *BlockChain) AddBlock(txs []*Transaction) error {
 
 // FindUnspentTransactions returns the Transactions where the output hasn't been spent yet
 // by the address
-func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction {
+func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []*Transaction {
 	var unspentTxs []*Transaction
 	spentTXOs := make(map[string][]int)
 
@@ -133,7 +133,7 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 				// If it's not a Coinbase, it means that's a normal transaction
 				// so it has a previous transaction
 				for _, txin := range tx.Inputs {
-					if txin.IsMadeBy(address) {
+					if txin.UsesKey(pubKeyHash) {
 						// if address can unlock, it means that address spent the previous output
 						prevTxHash := hex.EncodeToString(txin.PrevTxHash)
 						spentTXOs[prevTxHash] = append(spentTXOs[prevTxHash], txin.OutIdx)
@@ -141,10 +141,10 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 				}
 			}
 
-			txHash := hex.EncodeToString(tx.Hash)
+			txHash := hex.EncodeToString(tx.HashID)
 		Outputs:
 			for outIdx, out := range tx.Outputs {
-				if !out.IsFor(address) {
+				if !out.IsLockedWithKey(pubKeyHash) {
 					continue
 				}
 				// Check if the address has already spent the output
@@ -171,20 +171,20 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []*Transaction 
 	return unspentTxs
 }
 
-// FindSpendableTx returns the tokens accumulated by the spendable outputs and a map where
+// FindSpendableOutputs returns the tokens accumulated by the spendable outputs and a map where
 // the keys are hte Transactions IDs and the values are slices containing the indexes
 // of the outputs of that Transaction
-func (chain *BlockChain) FindSpendableTx(address string, requiredAmount int) (int, map[string][]int) {
+func (chain *BlockChain) FindSpendableOutputs(pubKeyHash []byte, requiredAmount int) (int, map[string][]int) {
 	unspentOuts := make(map[string][]int)
-	unspentTxs := chain.FindUnspentTransactions(address)
+	unspentTxs := chain.FindUnspentTransactions(pubKeyHash)
 	accumulated := 0
 
 Work:
 	for _, tx := range unspentTxs {
-		txHash := hex.EncodeToString(tx.Hash)
+		txHash := hex.EncodeToString(tx.HashID)
 
 		for outIdx, out := range tx.Outputs {
-			if out.IsFor(address) {
+			if out.IsLockedWithKey(pubKeyHash) {
 				accumulated += out.Value
 				unspentOuts[txHash] = append(unspentOuts[txHash], outIdx)
 
@@ -200,12 +200,12 @@ Work:
 
 // FindUTXO find the unspent outputs of the address. This function is useful
 // to get the address balance
-func (chain *BlockChain) FindUTXO(address string) []TxOutput {
+func (chain *BlockChain) FindUTXO(pubKeyHash []byte) []TxOutput {
 	var UTXOs []TxOutput
-	unspentTxs := chain.FindUnspentTransactions(address)
+	unspentTxs := chain.FindUnspentTransactions(pubKeyHash)
 	for _, tx := range unspentTxs {
 		for _, out := range tx.Outputs {
-			if out.IsFor(address) {
+			if out.IsLockedWithKey(pubKeyHash) {
 				UTXOs = append(UTXOs, out)
 			}
 		}
@@ -215,8 +215,8 @@ func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 }
 
 // GetBalance returns the balance of the address
-func (chain *BlockChain) GetBalance(address string) int {
-	unspentOutput := chain.FindUTXO(address)
+func (chain *BlockChain) GetBalance(pubKeyHash []byte) int {
+	unspentOutput := chain.FindUTXO(pubKeyHash)
 	total := 0
 
 	for _, out := range unspentOutput {
