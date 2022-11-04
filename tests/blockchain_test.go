@@ -45,13 +45,13 @@ func TestAddBlock(t *testing.T) {
 
 			fmt.Println("INPUTS:")
 			for _, in := range tx.Inputs {
-				fmt.Printf("PrevTxHash: %x\nOutIdx: %d\nSig: %s\n",
-					in.PrevTxHash, in.OutIdx, in.Sig)
+				fmt.Printf("PrevTxHash: %x\nOutIdx: %d\nSig: %x\n",
+					in.PrevTxHash, in.OutIdx, in.Signature)
 			}
 
 			fmt.Println("\nOUTPUTS:")
 			for _, out := range tx.Outputs {
-				fmt.Printf("Amount: %d\nPubKey: %s\n", out.Value, out.PubKey)
+				fmt.Printf("Amount: %d\nPubKey: %s\n", out.Value, out.PubKeyHash)
 			}
 			fmt.Printf("\n==================\n\n")
 		}
