@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"jotacoin/pkg/blockchain"
+	"jotacoin/pkg/wallet"
 	"testing"
 
 	"github.com/dgraph-io/badger"
@@ -10,12 +11,21 @@ import (
 )
 
 func TestAddBlock(t *testing.T) {
-	chain, err := blockchain.NewBlockChain("test")
+	ws := wallet.Wallets{}
+
+	address1, err := ws.AddWallet()
+	assert.Equal(t, nil, err)
+	address2, err := ws.AddWallet()
+	assert.Equal(t, nil, err)
+	err = ws.SaveFile()
+	assert.Equal(t, nil, err)
+
+	chain, err := blockchain.NewBlockChain(address1)
 	if err != nil {
 		panic(err)
 	}
 	defer chain.DB.Close()
-	tx, err := blockchain.NewTransaction("test", "test2", 10, chain)
+	tx, err := blockchain.NewTransaction(address1, address2, 10, chain)
 	assert.Equal(t, nil, err)
 	chain.AddBlock([]*blockchain.Transaction{tx})
 
@@ -41,7 +51,7 @@ func TestAddBlock(t *testing.T) {
 
 		fmt.Printf("Block hash: %x\n\n", block.Hash)
 		for _, tx := range block.Transactions {
-			fmt.Printf("Transaction Hash: %x\n\n", tx.Hash)
+			fmt.Printf("Transaction Hash: %x\n\n", tx.HashID)
 
 			fmt.Println("INPUTS:")
 			for _, in := range tx.Inputs {
@@ -51,7 +61,7 @@ func TestAddBlock(t *testing.T) {
 
 			fmt.Println("\nOUTPUTS:")
 			for _, out := range tx.Outputs {
-				fmt.Printf("Amount: %d\nPubKey: %s\n", out.Value, out.PubKeyHash)
+				fmt.Printf("Amount: %d\nPubKey: %x\n", out.Value, out.PubKeyHash)
 			}
 			fmt.Printf("\n==================\n\n")
 		}
