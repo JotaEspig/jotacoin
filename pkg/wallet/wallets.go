@@ -10,7 +10,7 @@ import (
 
 var (
 	// WalletFilePath is the file path where the wallets will be stored
-	WalletFilePath = "./dbwallets"
+	WalletFilePath = "./dbwallets/"
 	// WalletFile is the file where the wallets will be stored
 	WalletFile = "wallets.data" // TODO make it just store trhe filename
 )
