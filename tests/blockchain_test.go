@@ -3,7 +3,6 @@ package tests
 import (
 	"fmt"
 	"jotacoin/pkg/blockchain"
-	"jotacoin/pkg/wallet"
 	"testing"
 
 	"github.com/dgraph-io/badger"
@@ -11,16 +10,7 @@ import (
 )
 
 func TestAddBlock(t *testing.T) {
-	ws := wallet.Wallets{}
-
-	address1, err := ws.AddWallet()
-	assert.Equal(t, nil, err)
-	address2, err := ws.AddWallet()
-	assert.Equal(t, nil, err)
-	err = ws.SaveFile()
-	assert.Equal(t, nil, err)
-
-	chain, err := blockchain.NewBlockChain(address1)
+	chain, err := blockchain.ContinueBlockChain()
 	if err != nil {
 		panic(err)
 	}
@@ -41,6 +31,7 @@ func TestAddBlock(t *testing.T) {
 		})
 	})
 
+	// Go through all the blocks created
 	iter := chain.Iterator()
 	blocksAmount := 0
 	for {
