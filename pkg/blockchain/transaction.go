@@ -60,10 +60,18 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 		}
 	}
 
-	outputs = append(outputs, *NewTxOutput(amount, to))
+	newOutput, err := NewTxOutput(amount, to)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, *newOutput)
 	if acc > amount {
 		// if the accumulated is greater than the payment, there should be a change
-		outputs = append(outputs, *NewTxOutput(acc-amount, from))
+		newOutput, err = NewTxOutput(amount, to)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, *newOutput)
 	}
 
 	tx := &Transaction{nil, inputs, outputs}
@@ -86,10 +94,13 @@ func NewCoinbaseTx(to, data string) (*Transaction, error) {
 	}
 
 	txin := TxInput{[]byte{}, -1, nil, []byte(data)}
-	txout := NewTxOutput(CoinbaseValue, to)
+	txout, err := NewTxOutput(CoinbaseValue, to)
+	if err != nil {
+		return nil, err
+	}
 
 	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{*txout}}
-	err := tx.SetHashID()
+	err = tx.SetHashID()
 
 	return tx, err
 }

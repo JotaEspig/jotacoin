@@ -33,10 +33,10 @@ func (txin *TxInput) UsesKey(publicKeyHash []byte) bool {
 }
 
 // NewTxOutput creates a new output
-func NewTxOutput(value int, address string) *TxOutput {
+func NewTxOutput(value int, address string) (*TxOutput, error) {
 	txout := &TxOutput{value, nil}
-	txout.Lock(address)
-	return txout
+	err := txout.Lock(address)
+	return txout, err
 }
 
 // Lock locks the output according to the address
