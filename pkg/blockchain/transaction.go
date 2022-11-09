@@ -153,8 +153,8 @@ func (tx *Transaction) SetHashID() error {
 // TrimmedCopy returns a copy of the transaction but without the signature
 func (tx *Transaction) TrimmedCopy() Transaction {
 	txCopy := *tx
-	for _, txin := range tx.Inputs {
-		txin.Signature = nil
+	for txinIdx := range tx.Inputs {
+		txCopy.Inputs[txinIdx].Signature = nil
 	}
 
 	txCopy.SetHashID()
@@ -173,11 +173,10 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) error {
 
 	txCopy := tx.TrimmedCopy()
 	for txinIdx := range txCopy.Inputs {
-		r, s, err := ecdsa.Sign(rand.Reader, privKey, txCopy.HashID)
+		signature, err := ecdsa.SignASN1(rand.Reader, privKey, txCopy.HashID)
 		if err != nil {
 			return err
 		}
-		signature := append(r.Bytes(), s.Bytes()...)
 		tx.Inputs[txinIdx].Signature = signature
 	}
 
@@ -192,17 +191,13 @@ func (tx *Transaction) Verify() bool {
 	curve := elliptic.P256()
 	txCopy := tx.TrimmedCopy()
 	for _, txin := range tx.Inputs {
-		var r, s, x, y big.Int
-		sigLen := len(txin.Signature)
-		r.SetBytes(txin.Signature[:(sigLen / 2)]) // first half
-		s.SetBytes(txin.Signature[(sigLen / 2):]) // second half
-
+		var x, y big.Int
 		keyLen := len(txin.PubKey)
 		x.SetBytes(txin.PubKey[:(keyLen / 2)])
 		y.SetBytes(txin.PubKey[(keyLen / 2):])
 
 		rawPubKey := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
-		if !ecdsa.Verify(&rawPubKey, txCopy.HashID, &r, &s) {
+		if !ecdsa.VerifyASN1(&rawPubKey, txCopy.HashID, txin.Signature) {
 			return false
 		}
 	}
