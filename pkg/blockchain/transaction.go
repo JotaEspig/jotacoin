@@ -105,6 +105,7 @@ func NewCoinbaseTx(to, data string) (*Transaction, error) {
 	return tx, err
 }
 
+// Serialize converts the Transaction to an array of bytes
 func (tx *Transaction) Serialize() ([]byte, error) {
 	var encoded bytes.Buffer
 
@@ -117,6 +118,9 @@ func (tx *Transaction) Serialize() ([]byte, error) {
 	return encoded.Bytes(), nil
 }
 
+// Hash generates and returns the hash of the transaction disregarding the value
+// setted for the hash field. That's because it's needed to verify if the value of the hash field
+// is equal to the actual hash of the struct
 func (tx *Transaction) Hash() ([]byte, error) {
 	var hash [sha256.Size]byte
 
@@ -172,6 +176,7 @@ func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxHash) == 0 && tx.Inputs[0].OutIdx == -1
 }
 
+// Sign signs the transaction
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) error {
 	if tx.IsCoinbase() {
 		return nil
@@ -189,6 +194,7 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) error {
 	return nil
 }
 
+// Verify verifies if the transaction is valid according to the signature and public key
 func (tx *Transaction) Verify() bool {
 	if tx.IsCoinbase() {
 		return true
