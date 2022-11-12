@@ -152,11 +152,17 @@ func (tx *Transaction) SetHashID() error {
 
 // TrimmedCopy returns a copy of the transaction but without the signature
 func (tx *Transaction) TrimmedCopy() Transaction {
-	txCopy := *tx
-	for txinIdx := range tx.Inputs {
-		txCopy.Inputs[txinIdx].Signature = nil
+	var txInputs []TxInput
+	var txOutputs []TxOutput
+
+	for _, txin := range tx.Inputs {
+		txInputs = append(txInputs, TxInput{txin.PrevTxHash, txin.OutIdx, nil, txin.PubKey})
+	}
+	for _, txout := range tx.Outputs {
+		txOutputs = append(txOutputs, TxOutput{txout.Value, txout.PubKeyHash})
 	}
 
+	txCopy := Transaction{nil, txInputs, txOutputs}
 	txCopy.SetHashID()
 	return txCopy
 }
