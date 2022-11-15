@@ -14,18 +14,7 @@ type Iterator struct {
 // Next returns the block according to Iterator.CurrentHash and will set the
 // Iterator.CurrentHash to be the Block.PrevHash gotten
 func (iter *Iterator) Next() (*Block, error) {
-	block := &Block{}
-
-	err := iter.DB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(iter.CurrentHash)
-		if err != nil {
-			return err
-		}
-		return item.Value(func(val []byte) error {
-			block, err = bytesToSerializedBlock(val).Deserialize()
-			return err
-		})
-	})
+	block, err := getBlock(iter.DB, iter.CurrentHash)
 	if err != nil {
 		return nil, err
 	}

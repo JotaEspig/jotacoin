@@ -18,56 +18,32 @@ type BlockChain struct {
 
 // NewBlockChain creates a new blockchain, starting with coinbase
 func NewBlockChain(address string) (*BlockChain, error) {
-	var lastHash []byte
-
 	if database.DBexists() {
 		return nil, errors.New("Blockchain already exists")
 	}
 
+	cbtx, err := NewCoinbaseTx(address, genesisData)
+	if err != nil {
+		return nil, err
+	}
+
+	genesis := Genesis(cbtx)
+
 	db := database.ConnectDB(database.DBPath)
-	err := db.Update(func(txn *badger.Txn) error {
-		cbtx, err := NewCoinbaseTx(address, genesisData)
-		if err != nil {
-			return err
-		}
+	err = addBlockToDB(db, genesis)
 
-		genesis := Genesis(cbtx)
-		err = txn.Set(genesis.Hash, genesis.Serialize())
-		if err != nil {
-			return err
-		}
-
-		err = txn.Set([]byte("lastHash"), genesis.Hash)
-		if err != nil {
-			return err
-		}
-
-		lastHash = genesis.Hash
-		return nil
-	})
-
+	lastHash := genesis.Hash
 	return &BlockChain{lastHash, db}, err
 }
 
 // ContinueBlockChain continues the previous BlockChain if it already exists
 func ContinueBlockChain() (*BlockChain, error) {
-	var lastHash []byte
-
 	if !database.DBexists() {
 		return nil, errors.New("Blockchain doesn't exist")
 	}
 
 	db := database.ConnectDB(database.DBPath)
-	err := db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte("lastHash"))
-		if err != nil {
-			return err
-		}
-		return item.Value(func(val []byte) error {
-			lastHash = val
-			return nil
-		})
-	})
+	lastHash, err := getLastHash(db)
 	if err != nil {
 		return nil, err
 	}
@@ -82,36 +58,19 @@ func (chain *BlockChain) Iterator() *Iterator {
 
 // AddBlock adds a block into the chain of blocks
 func (chain *BlockChain) AddBlock(txs []*Transaction) error {
-	var lastHash []byte
-
-	err := chain.DB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte("lastHash"))
-		if err != nil {
-			return err
-		}
-		return item.Value(func(val []byte) error {
-			lastHash = val
-			return nil
-		})
-	})
+	lastHash, err := getLastHash(chain.DB)
 	if err != nil {
 		return err
 	}
 
 	newBlock := NewBlock(txs, lastHash)
-	return chain.DB.Update(func(txn *badger.Txn) error {
-		err = txn.Set(newBlock.Hash, newBlock.Serialize())
-		if err != nil {
-			return err
-		}
-		err = txn.Set([]byte("lastHash"), newBlock.Hash)
-		if err != nil {
-			return err
-		}
+	err = addBlockToDB(chain.DB, newBlock)
+	if err != nil {
+		return err
+	}
 
-		chain.LastHash = newBlock.Hash
-		return nil
-	})
+	chain.LastHash = newBlock.Hash
+	return nil
 }
 
 // FindUnspentTransactions returns the Transactions where the output hasn't been spent yet
