@@ -43,7 +43,7 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 		return nil, err
 	}
 
-	acc, spendableTxs := chain.FindSpendableOutputs(pubKeyHash, amount)
+	acc, spendableTxs := chain.FindSpendableTxOutputs(pubKeyHash, amount)
 	if acc < amount {
 		return nil, errors.New("transaction: not enough balance from the sender")
 	}
