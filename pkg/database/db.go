@@ -13,8 +13,8 @@ var (
 )
 
 // ConnectDB connects to the database
-func ConnectDB() *badger.DB {
-	opts := badger.DefaultOptions(DBPath)
+func ConnectDB(path string) *badger.DB {
+	opts := badger.DefaultOptions(path)
 	opts.Logger = nil
 	db, err := badger.Open(opts)
 	if err != nil {

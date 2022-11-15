@@ -24,7 +24,7 @@ func NewBlockChain(address string) (*BlockChain, error) {
 		return nil, errors.New("Blockchain already exists")
 	}
 
-	db := database.ConnectDB()
+	db := database.ConnectDB(database.DBPath)
 	err := db.Update(func(txn *badger.Txn) error {
 		cbtx, err := NewCoinbaseTx(address, genesisData)
 		if err != nil {
@@ -57,7 +57,7 @@ func ContinueBlockChain() (*BlockChain, error) {
 		return nil, errors.New("Blockchain doesn't exist")
 	}
 
-	db := database.ConnectDB()
+	db := database.ConnectDB(database.DBPath)
 	err := db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("lastHash"))
 		if err != nil {
