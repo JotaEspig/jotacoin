@@ -115,7 +115,7 @@ func (chain *BlockChain) AddBlock(txs []*Transaction) error {
 }
 
 // FindUnspentTransactions returns the Transactions where the output hasn't been spent yet
-// by the address
+// by the public key hash
 func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []*Transaction {
 	var unspentTxs []*Transaction
 	spentTXOs := make(map[string][]int)
@@ -171,8 +171,8 @@ func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []*Transacti
 	return unspentTxs
 }
 
-// FindSpendableOutputs returns the tokens accumulated by the spendable outputs and a map where
-// the keys are hte Transactions IDs and the values are slices containing the indexes
+// FindSpendableTxOutputs returns the tokens accumulated by the spendable outputs and a map where
+// the keys are the Transactions IDs and the values are slices containing the indexes
 // of the outputs of that Transaction
 func (chain *BlockChain) FindSpendableOutputs(pubKeyHash []byte, requiredAmount int) (int, map[string][]int) {
 	unspentOuts := make(map[string][]int)
@@ -195,11 +195,11 @@ Work:
 		}
 	}
 
-	return accumulated, unspentOuts
+	return accumulated, spendableOuts
 }
 
-// FindUTXO find the unspent outputs of the address. This function is useful
-// to get the address balance
+// FindUTXO find the unspent outputs of the public key hash. This function is useful
+// to get the public key hash balance
 func (chain *BlockChain) FindUTXO(pubKeyHash []byte) []TxOutput {
 	var UTXOs []TxOutput
 	unspentTxs := chain.FindUnspentTransactions(pubKeyHash)
@@ -214,7 +214,7 @@ func (chain *BlockChain) FindUTXO(pubKeyHash []byte) []TxOutput {
 	return UTXOs
 }
 
-// GetBalance returns the balance of the address
+// GetBalance returns the balance of the public key hash
 func (chain *BlockChain) GetBalance(pubKeyHash []byte) int {
 	unspentOutput := chain.FindUTXO(pubKeyHash)
 	total := 0
