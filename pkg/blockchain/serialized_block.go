@@ -9,6 +9,7 @@ import (
 // of serializing
 type SerializedBlock []byte
 
+// bytesToSerializedBlock cast the data to SerializedBlock. Then you can use the Deserialize method
 func bytesToSerializedBlock(data []byte) SerializedBlock {
 	return data
 }

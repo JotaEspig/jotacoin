@@ -17,7 +17,7 @@ type ProofOfWork struct {
 	Target *big.Int
 }
 
-// NewProof creates a new Proof of Work struct
+// NewProof creates a new Proof of Work struct according to the Difficulty variable value
 func NewProof(block *Block) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-Difficulty))
@@ -41,9 +41,9 @@ func (pow *ProofOfWork) InitData(nonce int) []byte {
 func (pow *ProofOfWork) Run() (int, []byte) {
 	var intHash big.Int
 	var hash [sha256.Size]byte
+	var nonce int
 
-	nonce := 0
-	for nonce < math.MaxInt64 {
+	for nonce = 0; nonce < math.MaxInt64; nonce++ {
 		data := pow.InitData(nonce)
 		hash = sha256.Sum256(data)
 
@@ -51,7 +51,6 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 		if intHash.Cmp(pow.Target) == -1 {
 			break
 		}
-		nonce++
 	}
 	return nonce, hash[:]
 }
