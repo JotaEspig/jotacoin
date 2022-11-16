@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"jotacoin/pkg/blockchain"
+	"jotacoin/pkg/wallet"
 	"testing"
 
 	"github.com/dgraph-io/badger"
@@ -60,4 +61,33 @@ func TestAddBlock(t *testing.T) {
 		blocksAmount++
 	}
 	assert.GreaterOrEqual(t, blocksAmount, 2)
+}
+
+// Run it after TestAddBlock
+func TestGetBalance(t *testing.T) {
+	wallets, err := wallet.LoadFile()
+	if err != nil {
+		panic(err)
+	}
+	w1 := wallets.GetWallet(address1)
+	w2 := wallets.GetWallet(address2)
+	pubKeyHash1, err := wallet.PublicKeyHash(w1.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+	pubKeyHash2, err := wallet.PublicKeyHash(w2.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+
+	chain, err := blockchain.ContinueBlockChain()
+	if err != nil {
+		panic(err)
+	}
+	defer chain.DB.Close()
+
+	balance1 := chain.GetBalance(pubKeyHash1)
+	balance2 := chain.GetBalance(pubKeyHash2)
+	assert.Equal(t, 90, balance1)
+	assert.Equal(t, 10, balance2)
 }
