@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"log"
 )
 
@@ -15,4 +16,17 @@ func ToHex(num int64) []byte {
 	}
 
 	return buff.Bytes()
+}
+
+// Serialize returns a []byte representative of data
+func Serialize(data any) ([]byte, error) {
+	var result bytes.Buffer
+
+	encoder := gob.NewEncoder(&result)
+	err := encoder.Encode(data)
+	if err != nil {
+		return []byte{}, nil
+	}
+
+	return result.Bytes(), nil
 }

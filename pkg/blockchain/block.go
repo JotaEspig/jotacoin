@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
-	"log"
 )
 
 // Block represents a block in a blockchain
@@ -31,6 +30,14 @@ func Genesis(coinbase *Transaction) *Block {
 	return NewBlock([]*Transaction{coinbase}, []byte{})
 }
 
+// DeserializeBlock transforms a serialized block ([]byte) into a Block
+func DeserializeBlock(data []byte) (*Block, error) {
+	block := &Block{}
+	decoder := gob.NewDecoder(bytes.NewReader(data))
+	err := decoder.Decode(block)
+	return block, err
+}
+
 // HashTransactions generates the hash of the combined transactions
 func (b *Block) HashTransactions() []byte {
 	var txHashes [][]byte
@@ -42,17 +49,4 @@ func (b *Block) HashTransactions() []byte {
 	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
 
 	return txHash[:]
-}
-
-// Serialize returns a block struct as a SerializedBlock
-func (b *Block) Serialize() SerializedBlock {
-	var result bytes.Buffer
-
-	encoder := gob.NewEncoder(&result)
-	err := encoder.Encode(b)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	return result.Bytes()
 }

@@ -1,6 +1,10 @@
 package blockchain
 
-import "github.com/dgraph-io/badger"
+import (
+	"jotacoin/pkg/utils"
+
+	"github.com/dgraph-io/badger"
+)
 
 func getLastHash(db *badger.DB) ([]byte, error) {
 	var lastHash []byte
@@ -27,7 +31,7 @@ func getBlock(db *badger.DB, hash []byte) (*Block, error) {
 			return err
 		}
 		return item.Value(func(val []byte) error {
-			block, err = bytesToSerializedBlock(val).Deserialize()
+			block, err = DeserializeBlock(val)
 			return err
 		})
 	})
@@ -37,7 +41,11 @@ func getBlock(db *badger.DB, hash []byte) (*Block, error) {
 
 func addBlockToDB(db *badger.DB, b *Block) error {
 	return db.Update(func(txn *badger.Txn) error {
-		err := txn.Set(b.Hash, b.Serialize())
+		serializedBlock, err := utils.Serialize(b)
+		if err != nil {
+			return err
+		}
+		err = txn.Set(b.Hash, serializedBlock)
 		if err != nil {
 			return err
 		}
