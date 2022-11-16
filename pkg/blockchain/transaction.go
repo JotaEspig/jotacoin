@@ -67,7 +67,7 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 	outputs = append(outputs, *newOutput)
 	if acc > amount {
 		// if the accumulated is greater than the payment, there should be a change
-		newOutput, err = NewTxOutput(amount, to)
+		newOutput, err = NewTxOutput(acc-amount, from)
 		if err != nil {
 			return nil, err
 		}
