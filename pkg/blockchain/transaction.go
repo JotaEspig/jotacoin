@@ -24,6 +24,33 @@ type Transaction struct {
 	Outputs []TxOutput
 }
 
+// NewCoinbaseTx creates a coinbase and it "gives" to a receiver
+func NewCoinbaseTx(to, data string) (*Transaction, error) {
+	if data == "" {
+		data = fmt.Sprintf("Coins to %s", to)
+	}
+
+	txin := TxInput{[]byte{}, -1, nil, []byte(data)}
+	txout, err := NewTxOutput(CoinbaseValue, to)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{*txout}}
+	hash, err := tx.Hash()
+	if err != nil {
+		return nil, err
+	}
+
+	tx.HashID = hash
+	return tx, err
+}
+
+// IsCoinbase checks if the transaction is a coinbase
+func (tx *Transaction) IsCoinbase() bool {
+	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxHash) == 0 && tx.Inputs[0].OutIdx == -1
+}
+
 // NewTransaction creates a normal transaction (one sender and one receiver)
 func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transaction, error) {
 	var inputs []TxInput
@@ -87,28 +114,6 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 	return tx, nil
 }
 
-// NewCoinbaseTx creates a coinbase and it "gives" to a receiver
-func NewCoinbaseTx(to, data string) (*Transaction, error) {
-	if data == "" {
-		data = fmt.Sprintf("Coins to %s", to)
-	}
-
-	txin := TxInput{[]byte{}, -1, nil, []byte(data)}
-	txout, err := NewTxOutput(CoinbaseValue, to)
-	if err != nil {
-		return nil, err
-	}
-
-	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{*txout}}
-	hash, err := tx.Hash()
-	if err != nil {
-		return nil, err
-	}
-
-	tx.HashID = hash
-	return tx, err
-}
-
 // Hash generates and returns the hash of the transaction disregarding the value
 // setted for the hash field.
 func (tx *Transaction) Hash() ([]byte, error) {
@@ -124,32 +129,6 @@ func (tx *Transaction) Hash() ([]byte, error) {
 	hash = sha256.Sum256(txSerialized)
 
 	return hash[:], nil
-}
-
-// TrimmedCopy returns a copy of the transaction but without the signature
-func (tx *Transaction) TrimmedCopy() (Transaction, error) {
-	var txInputs []TxInput
-	var txOutputs []TxOutput
-
-	for _, txin := range tx.Inputs {
-		txInputs = append(txInputs, TxInput{txin.PrevTxHash, txin.OutIdx, nil, txin.PubKey})
-	}
-	for _, txout := range tx.Outputs {
-		txOutputs = append(txOutputs, TxOutput{txout.Value, txout.PubKeyHash})
-	}
-
-	txCopy := Transaction{nil, txInputs, txOutputs}
-	hash, err := txCopy.Hash()
-	if err != nil {
-		return Transaction{}, err
-	}
-	txCopy.HashID = hash
-	return txCopy, nil
-}
-
-// IsCoinbase checks if the transaction is a coinbase
-func (tx *Transaction) IsCoinbase() bool {
-	return len(tx.Inputs) == 1 && len(tx.Inputs[0].PrevTxHash) == 0 && tx.Inputs[0].OutIdx == -1
 }
 
 // Sign signs the transaction
@@ -199,4 +178,25 @@ func (tx *Transaction) Verify() bool {
 	}
 
 	return true
+}
+
+// TrimmedCopy returns a copy of the transaction but without the signature
+func (tx *Transaction) TrimmedCopy() (Transaction, error) {
+	var txInputs []TxInput
+	var txOutputs []TxOutput
+
+	for _, txin := range tx.Inputs {
+		txInputs = append(txInputs, TxInput{txin.PrevTxHash, txin.OutIdx, nil, txin.PubKey})
+	}
+	for _, txout := range tx.Outputs {
+		txOutputs = append(txOutputs, TxOutput{txout.Value, txout.PubKeyHash})
+	}
+
+	txCopy := Transaction{nil, txInputs, txOutputs}
+	hash, err := txCopy.Hash()
+	if err != nil {
+		return Transaction{}, err
+	}
+	txCopy.HashID = hash
+	return txCopy, nil
 }
