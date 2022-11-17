@@ -110,8 +110,7 @@ func NewCoinbaseTx(to, data string) (*Transaction, error) {
 }
 
 // Hash generates and returns the hash of the transaction disregarding the value
-// setted for the hash field. That's because it's needed to verify if the value of the hash field
-// is equal to the actual hash of the struct
+// setted for the hash field.
 func (tx *Transaction) Hash() ([]byte, error) {
 	var hash [sha256.Size]byte
 
