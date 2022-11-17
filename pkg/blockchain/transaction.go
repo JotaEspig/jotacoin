@@ -1,15 +1,14 @@
 package blockchain
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/gob"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"jotacoin/pkg/utils"
 	"jotacoin/pkg/wallet"
 	"math/big"
 )
@@ -79,11 +78,12 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transactio
 	if err != nil {
 		return nil, err
 	}
-	err = tx.SetHashID()
+	hash, err := tx.Hash()
 	if err != nil {
 		return nil, err
 	}
 
+	tx.HashID = hash
 	return tx, nil
 }
 
@@ -100,22 +100,13 @@ func NewCoinbaseTx(to, data string) (*Transaction, error) {
 	}
 
 	tx := &Transaction{nil, []TxInput{txin}, []TxOutput{*txout}}
-	err = tx.SetHashID()
-
-	return tx, err
-}
-
-// Serialize converts the Transaction to an array of bytes
-func (tx *Transaction) Serialize() ([]byte, error) {
-	var encoded bytes.Buffer
-
-	encoder := gob.NewEncoder(&encoded)
-	err := encoder.Encode(encoded)
+	hash, err := tx.Hash()
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
-	return encoded.Bytes(), nil
+	tx.HashID = hash
+	return tx, err
 }
 
 // Hash generates and returns the hash of the transaction disregarding the value
@@ -127,7 +118,7 @@ func (tx *Transaction) Hash() ([]byte, error) {
 	txCopy := *tx
 	txCopy.HashID = []byte{}
 
-	txSerialized, err := txCopy.Serialize()
+	txSerialized, err := utils.Serialize(txCopy)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -136,26 +127,8 @@ func (tx *Transaction) Hash() ([]byte, error) {
 	return hash[:], nil
 }
 
-// SetHashID sets the hash to the transaction
-func (tx *Transaction) SetHashID() error {
-	var result bytes.Buffer
-	var hash [sha256.Size]byte
-
-	tx.HashID = []byte{}
-
-	encode := gob.NewEncoder(&result)
-	err := encode.Encode(tx)
-	if err != nil {
-		return err
-	}
-
-	hash = sha256.Sum256(result.Bytes())
-	tx.HashID = hash[:]
-	return nil
-}
-
 // TrimmedCopy returns a copy of the transaction but without the signature
-func (tx *Transaction) TrimmedCopy() Transaction {
+func (tx *Transaction) TrimmedCopy() (Transaction, error) {
 	var txInputs []TxInput
 	var txOutputs []TxOutput
 
@@ -167,8 +140,12 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	}
 
 	txCopy := Transaction{nil, txInputs, txOutputs}
-	txCopy.SetHashID()
-	return txCopy
+	hash, err := txCopy.Hash()
+	if err != nil {
+		return Transaction{}, err
+	}
+	txCopy.HashID = hash
+	return txCopy, nil
 }
 
 // IsCoinbase checks if the transaction is a coinbase
@@ -182,7 +159,11 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) error {
 		return nil
 	}
 
-	txCopy := tx.TrimmedCopy()
+	txCopy, err := tx.TrimmedCopy()
+	if err != nil {
+		return err
+	}
+
 	for txinIdx := range txCopy.Inputs {
 		signature, err := ecdsa.SignASN1(rand.Reader, privKey, txCopy.HashID)
 		if err != nil {
@@ -201,7 +182,11 @@ func (tx *Transaction) Verify() bool {
 	}
 
 	curve := elliptic.P256()
-	txCopy := tx.TrimmedCopy()
+	txCopy, err := tx.TrimmedCopy()
+	if err != nil {
+		return false
+	}
+
 	for _, txin := range tx.Inputs {
 		var x, y big.Int
 		keyLen := len(txin.PubKey)
