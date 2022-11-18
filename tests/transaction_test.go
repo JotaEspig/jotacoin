@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewTransaction(t *testing.T) {
-	chain, err := blockchain.ContinueBlockChain()
+	chain, err := blockchain.ContinueBlockchain()
 	if err != nil {
 		panic(err)
 	}

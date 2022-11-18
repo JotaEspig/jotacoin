@@ -35,7 +35,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	chain, err := blockchain.NewBlockChain(address1)
+	chain, err := blockchain.NewBlockchain(address1)
 	if err != nil {
 		panic(err)
 	}

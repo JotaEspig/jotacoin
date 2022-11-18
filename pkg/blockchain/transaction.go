@@ -52,7 +52,7 @@ func (tx *Transaction) IsCoinbase() bool {
 }
 
 // NewTransaction creates a normal transaction (one sender and one receiver)
-func NewTransaction(from, to string, amount int, chain *BlockChain) (*Transaction, error) {
+func NewTransaction(from, to string, amount int, chain *Blockchain) (*Transaction, error) {
 	var inputs []TxInput
 	var outputs []TxOutput
 

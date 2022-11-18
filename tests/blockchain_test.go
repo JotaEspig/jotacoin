@@ -11,7 +11,7 @@ import (
 )
 
 func TestAddBlock(t *testing.T) {
-	chain, err := blockchain.ContinueBlockChain()
+	chain, err := blockchain.ContinueBlockchain()
 	if err != nil {
 		panic(err)
 	}
@@ -80,7 +80,7 @@ func TestGetBalance(t *testing.T) {
 		panic(err)
 	}
 
-	chain, err := blockchain.ContinueBlockChain()
+	chain, err := blockchain.ContinueBlockchain()
 	if err != nil {
 		panic(err)
 	}

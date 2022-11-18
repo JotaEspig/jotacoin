@@ -10,14 +10,14 @@ import (
 
 const genesisData = "Genesis Transaction"
 
-// BlockChain Represents a chain of blocks
-type BlockChain struct {
+// Blockchain Represents a chain of blocks
+type Blockchain struct {
 	LastHash []byte
 	DB       *badger.DB
 }
 
-// NewBlockChain creates a new blockchain, starting with coinbase
-func NewBlockChain(address string) (*BlockChain, error) {
+// NewBlockchain creates a new blockchain, starting with coinbase
+func NewBlockchain(address string) (*Blockchain, error) {
 	if database.DBexists() {
 		return nil, errors.New("Blockchain already exists")
 	}
@@ -33,11 +33,11 @@ func NewBlockChain(address string) (*BlockChain, error) {
 	err = addBlockToDB(db, genesis)
 
 	lastHash := genesis.Hash
-	return &BlockChain{lastHash, db}, err
+	return &Blockchain{lastHash, db}, err
 }
 
-// ContinueBlockChain continues the previous BlockChain if it already exists
-func ContinueBlockChain() (*BlockChain, error) {
+// ContinueBlockchain continues the previous BlockChain if it already exists
+func ContinueBlockchain() (*Blockchain, error) {
 	if !database.DBexists() {
 		return nil, errors.New("Blockchain doesn't exist")
 	}
@@ -48,16 +48,16 @@ func ContinueBlockChain() (*BlockChain, error) {
 		return nil, err
 	}
 
-	return &BlockChain{lastHash, db}, nil
+	return &Blockchain{lastHash, db}, nil
 }
 
 // Iterator creates a BlockChain Iterador
-func (chain *BlockChain) Iterator() *Iterator {
+func (chain *Blockchain) Iterator() *Iterator {
 	return &Iterator{chain.LastHash, chain.DB}
 }
 
 // AddBlock adds a block into the chain of blocks
-func (chain *BlockChain) AddBlock(txs []*Transaction) error {
+func (chain *Blockchain) AddBlock(txs []*Transaction) error {
 	lastHash, err := getLastHash(chain.DB)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (chain *BlockChain) AddBlock(txs []*Transaction) error {
 
 // FindUnspentTransactions returns the Transactions where the output hasn't been spent yet
 // by the public key hash
-func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []*Transaction {
+func (chain *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []*Transaction {
 	var unspentTxs []*Transaction
 	spentTXOs := make(map[string][]int)
 
@@ -133,7 +133,7 @@ func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []*Transacti
 // FindSpendableTxOutputs returns the tokens accumulated by the spendable outputs and a map where
 // the keys are the Transactions IDs and the values are slices containing the indexes
 // of the outputs of that Transaction
-func (chain *BlockChain) FindSpendableTxOutputs(
+func (chain *Blockchain) FindSpendableTxOutputs(
 	pubKeyHash []byte, requiredAmount int,
 ) (int, map[string][]int) {
 	spendableOuts := make(map[string][]int)
@@ -161,7 +161,7 @@ Work:
 
 // FindUTXO find the unspent outputs of the public key hash. This function is useful
 // to get the public key hash balance
-func (chain *BlockChain) FindUTXO(pubKeyHash []byte) []TxOutput {
+func (chain *Blockchain) FindUTXO(pubKeyHash []byte) []TxOutput {
 	var UTXOs []TxOutput
 	unspentTxs := chain.FindUnspentTransactions(pubKeyHash)
 	for _, tx := range unspentTxs {
@@ -176,7 +176,7 @@ func (chain *BlockChain) FindUTXO(pubKeyHash []byte) []TxOutput {
 }
 
 // GetBalance returns the balance of the public key hash
-func (chain *BlockChain) GetBalance(pubKeyHash []byte) int {
+func (chain *Blockchain) GetBalance(pubKeyHash []byte) int {
 	unspentOutput := chain.FindUTXO(pubKeyHash)
 	total := 0
 
