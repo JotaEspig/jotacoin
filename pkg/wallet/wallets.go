@@ -32,6 +32,7 @@ func LoadFile() (Wallets, error) {
 		return Wallets{}, err
 	}
 
+	// TODO trying to use elliptic.Marshall and Unmarshall
 	gob.Register(elliptic.P256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&wallets)
@@ -46,6 +47,7 @@ func LoadFile() (Wallets, error) {
 func (ws *Wallets) SaveFile() error {
 	var content bytes.Buffer
 
+	// TODO trying to use elliptic.Marshall and Unmarshall
 	gob.Register(elliptic.P256())
 	encoder := gob.NewEncoder(&content)
 	err := encoder.Encode(ws)

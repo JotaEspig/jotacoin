@@ -3,30 +3,52 @@ package cli
 import (
 	"fmt"
 	"jotacoin/pkg/blockchain"
-	"log"
+	"jotacoin/pkg/wallet"
 	"os"
 )
 
 // CommandLine is the struct that is responsable for running the commands
 type CommandLine struct {
-	Chain *blockchain.BlockChain
 }
 
-func (cli *CommandLine) addBlock(data string) {
-	err := cli.Chain.AddBlock(data)
+func (cli *CommandLine) newWallet() {
+	w, err := wallet.NewWallet()
 	if err != nil {
-		log.Println("An error has occured when adding a block: ", err)
-		return
+		panic(err)
+	}
+	address, err := w.Address()
+	if err != nil {
+		panic(err)
 	}
 
-	log.Printf("Block added into the database\n")
+	ws := wallet.Wallets{address: w}
+	err = ws.SaveFile()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Added Wallet!\nAddress: %s\n", address)
+}
+
+func (cli *CommandLine) newBlockchain(address string) {
+	_, err := blockchain.NewBlockchain(address)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("New BlockChain created")
 }
 
 func (cli *CommandLine) printAll() {
 	var block *blockchain.Block
 	var err error
 
-	iter := cli.Chain.Iterator()
+	chain, err := blockchain.ContinueBlockchain()
+	if err != nil {
+		panic(err)
+	}
+
+	iter := chain.Iterator()
 	for {
 		block, err = iter.Next()
 		if err != nil {
@@ -37,16 +59,17 @@ func (cli *CommandLine) printAll() {
 		isValid := pow.IsValid()
 
 		fmt.Println()
-		fmt.Printf("Hash: %x\nValue: %s\nPrevious Hash: %x\nPoW: %v\n",
-			block.Hash, string(block.Data), block.PrevHash, isValid)
+		fmt.Println(*block, isValid)
 	}
 }
 
 // Run runs the command line
 func (cli *CommandLine) Run() {
 	switch os.Args[1] {
-	case "add":
-		cli.addBlock(os.Args[2])
+	case "newwallet":
+		cli.newWallet()
+	case "newblockchain":
+		cli.newBlockchain(os.Args[2])
 	case "print":
 		cli.printAll()
 	}
