@@ -133,7 +133,9 @@ func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []*Transacti
 // FindSpendableTxOutputs returns the tokens accumulated by the spendable outputs and a map where
 // the keys are the Transactions IDs and the values are slices containing the indexes
 // of the outputs of that Transaction
-func (chain *BlockChain) FindSpendableTxOutputs(pubKeyHash []byte, requiredAmount int) (int, map[string][]int) {
+func (chain *BlockChain) FindSpendableTxOutputs(
+	pubKeyHash []byte, requiredAmount int,
+) (int, map[string][]int) {
 	spendableOuts := make(map[string][]int)
 	unspentTxs := chain.FindUnspentTransactions(pubKeyHash)
 	accumulated := 0
