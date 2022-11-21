@@ -2,7 +2,7 @@ package wallet
 
 import (
 	"bytes"
-	"crypto/elliptic"
+	"crypto/x509"
 	"encoding/gob"
 	"io/ioutil"
 	"os"
@@ -18,8 +18,15 @@ var (
 // Wallets represents a map containing the wallets
 type Wallets map[string]*Wallet
 
+// walletsToFile is a struct that is the midway between Wallets struct and the file content
+type walletFile struct {
+	PrivateKey []byte
+	PublicKey  []byte
+}
+
 // LoadFile load the content of a file and returns the map containing the maps
 func LoadFile() (Wallets, error) {
+	var wsToLoad []walletFile
 	var wallets Wallets
 
 	filepath := WalletFilePath + WalletFile
@@ -33,11 +40,23 @@ func LoadFile() (Wallets, error) {
 	}
 
 	// TODO trying to use elliptic.Marshall and Unmarshall
-	gob.Register(elliptic.P256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
-	err = decoder.Decode(&wallets)
+	err = decoder.Decode(&wsToLoad)
 	if err != nil {
 		return Wallets{}, err
+	}
+
+	for _, w := range wsToLoad {
+		priv, err := x509.ParseECPrivateKey(w.PrivateKey)
+		if err != nil {
+			return Wallets{}, err
+		}
+
+		// TODO FINISH THIS
+		*allets = append(*wallets, Wallet{
+			priv,
+			w.PublicKey,
+		})
 	}
 
 	return wallets, nil
@@ -46,11 +65,22 @@ func LoadFile() (Wallets, error) {
 // SaveFile saves the wallets into a file
 func (ws *Wallets) SaveFile() error {
 	var content bytes.Buffer
+	wsToSave := []walletFile{}
 
-	// TODO trying to use elliptic.Marshall and Unmarshall
-	gob.Register(elliptic.P256())
+	for _, w := range *ws {
+		priv, err := x509.MarshalECPrivateKey(w.PrivateKey)
+		if err != nil {
+			return err
+		}
+
+		wsToSave = append(wsToSave, walletFile{
+			priv,
+			w.PublicKey,
+		})
+	}
+
 	encoder := gob.NewEncoder(&content)
-	err := encoder.Encode(ws)
+	err := encoder.Encode(wsToSave)
 	if err != nil {
 		return err
 	}
