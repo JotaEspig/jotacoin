@@ -27,7 +27,7 @@ type walletFile struct {
 // LoadFile load the content of a file and returns the map containing the maps
 func LoadFile() (Wallets, error) {
 	var wsToLoad []walletFile
-	var wallets Wallets
+	wallets := Wallets{}
 
 	filepath := WalletFilePath + WalletFile
 	if _, err := os.Stat(filepath); os.IsNotExist(err) {
@@ -39,24 +39,25 @@ func LoadFile() (Wallets, error) {
 		return Wallets{}, err
 	}
 
-	// TODO trying to use elliptic.Marshall and Unmarshall
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&wsToLoad)
 	if err != nil {
 		return Wallets{}, err
 	}
 
-	for _, w := range wsToLoad {
-		priv, err := x509.ParseECPrivateKey(w.PrivateKey)
+	for _, wf := range wsToLoad {
+		priv, err := x509.ParseECPrivateKey(wf.PrivateKey)
 		if err != nil {
 			return Wallets{}, err
 		}
 
-		// TODO FINISH THIS
-		*allets = append(*wallets, Wallet{
-			priv,
-			w.PublicKey,
-		})
+		w := &Wallet{priv, wf.PublicKey}
+		address, err := w.Address()
+		if err != nil {
+			return Wallets{}, err
+		}
+
+		wallets[address] = w
 	}
 
 	return wallets, nil
