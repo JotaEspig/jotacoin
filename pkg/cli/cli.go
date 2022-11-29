@@ -12,6 +12,10 @@ type CommandLine struct {
 }
 
 func (cli *CommandLine) newWallet() {
+	ws, err := wallet.LoadFile()
+	if err != nil {
+		panic(err)
+	}
 	w, err := wallet.NewWallet()
 	if err != nil {
 		panic(err)
@@ -21,7 +25,7 @@ func (cli *CommandLine) newWallet() {
 		panic(err)
 	}
 
-	ws := wallet.Wallets{address: w}
+	ws[address] = w
 	err = ws.SaveFile()
 	if err != nil {
 		panic(err)
