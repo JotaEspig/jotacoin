@@ -30,6 +30,20 @@ func (cli *CommandLine) newWallet() {
 	fmt.Printf("Added Wallet!\nAddress: %s\n", address)
 }
 
+func (cli *CommandLine) showWallets() {
+	ws, err := wallet.LoadFile()
+	if err != nil {
+		panic(err)
+	}
+	for _, w := range ws {
+		address, err := w.Address()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Priv: %v\nPub: %x\nAddress: %s\n\n", w.PrivateKey, w.PublicKey, address)
+	}
+}
+
 func (cli *CommandLine) newBlockchain(address string) {
 	_, err := blockchain.NewBlockchain(address)
 	if err != nil {
@@ -68,6 +82,8 @@ func (cli *CommandLine) Run() {
 	switch os.Args[1] {
 	case "newwallet":
 		cli.newWallet()
+	case "showwallets":
+		cli.showWallets()
 	case "newblockchain":
 		cli.newBlockchain(os.Args[2])
 	case "print":
