@@ -12,6 +12,8 @@ import (
 )
 
 const (
+	// ChecksumLength is the length of the checksum used in the generation
+	// of the wallet's address
 	ChecksumLength = 4
 	version        = byte(0x00)
 )
@@ -59,7 +61,7 @@ func NewKeyPair() (*ecdsa.PrivateKey, []byte, error) {
 	return private, pub, err
 }
 
-//PublicKeyHash generates the hash of the public key
+// PublicKeyHash generates the hash of the public key
 func PublicKeyHash(pubKey []byte) ([]byte, error) {
 	pubHash := sha256.Sum256(pubKey)
 
@@ -80,6 +82,7 @@ func checksum(payload []byte) []byte {
 	return secondHash[:ChecksumLength]
 }
 
+// ValidateAddress checks if checksum contained in the address is correct
 func ValidateAddress(address string) bool {
 	fullHash, err := base58.Decode(address)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/gob"
 	"io/ioutil"
+	"jotacoin/pkg/utils"
 	"os"
 )
 
@@ -12,21 +13,21 @@ var (
 	// WalletFilePath is the file path where the wallets will be stored
 	WalletFilePath = "./dbwallets/"
 	// WalletFile is the file where the wallets will be stored
-	WalletFile = "wallets.data" // TODO make it just store trhe filename
+	WalletFile = "wallets.data"
 )
 
 // Wallets represents a map containing the wallets
 type Wallets map[string]*Wallet
 
 // walletsToFile is a struct that is the midway between Wallets struct and the file content
-type walletFile struct {
+type walletAsBytes struct {
 	PrivateKey []byte
 	PublicKey  []byte
 }
 
 // LoadFile load the content of a file and returns the map containing the maps
 func LoadFile() (Wallets, error) {
-	var wsToLoad []walletFile
+	var wsToLoad []walletAsBytes
 	wallets := Wallets{}
 
 	filepath := WalletFilePath + WalletFile
@@ -65,8 +66,7 @@ func LoadFile() (Wallets, error) {
 
 // SaveFile saves the wallets into a file
 func (ws *Wallets) SaveFile() error {
-	var content bytes.Buffer
-	wsToSave := []walletFile{}
+	wsToSave := []walletAsBytes{}
 
 	for _, w := range *ws {
 		priv, err := x509.MarshalECPrivateKey(w.PrivateKey)
@@ -74,14 +74,13 @@ func (ws *Wallets) SaveFile() error {
 			return err
 		}
 
-		wsToSave = append(wsToSave, walletFile{
+		wsToSave = append(wsToSave, walletAsBytes{
 			priv,
 			w.PublicKey,
 		})
 	}
 
-	encoder := gob.NewEncoder(&content)
-	err := encoder.Encode(wsToSave)
+	content, err := utils.Serialize(wsToSave)
 	if err != nil {
 		return err
 	}
@@ -91,9 +90,10 @@ func (ws *Wallets) SaveFile() error {
 	}
 
 	filepath := WalletFilePath + WalletFile
-	return ioutil.WriteFile(filepath, content.Bytes(), 0644)
+	return ioutil.WriteFile(filepath, content, 0644)
 }
 
+// AddWallet adds a wallet to the Wallets map (itself)
 func (ws *Wallets) AddWallet() (string, error) {
 	w, err := NewWallet()
 	if err != nil {
@@ -110,6 +110,7 @@ func (ws *Wallets) AddWallet() (string, error) {
 	return address, nil
 }
 
+// GetAllAddresses returns the addresses of all wallets stored in Wallets map
 func (ws *Wallets) GetAllAddresses() []string {
 	var addresses []string
 
@@ -120,6 +121,7 @@ func (ws *Wallets) GetAllAddresses() []string {
 	return addresses
 }
 
+// GetWallet gets a wallet from the Wallets map according to the address
 func (ws *Wallets) GetWallet(address string) *Wallet {
 	return (*ws)[address]
 }
